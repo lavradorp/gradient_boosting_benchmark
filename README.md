@@ -5,6 +5,7 @@ Comparação de desempenho estatístico e computacional entre três frameworks d
 Tipo de problema de Machine Learning usado: Regressão.
 
 Métricas estatísticas analisadas: MAE, RMSE, R².
+
 Métricas computacionais analisadas: Tempo de treino, tempo de inferência e uso de RAM.
 
 Todos os modelos foram treinados e avaliados sob as mesmas condições: mesma divisão de dados, mesmo pipeline de pré-processamento e mesma quantidade de execuções, no caso foram 10 execuções.
@@ -17,7 +18,7 @@ A variável alvo (target) do problema é a coluna `Trip_Price`.
 
 ## Pipeline do benchmark
 
-O fluxo completo acontece em três etapas, cada uma isolada em um módulo:
+O fluxo acontece em três etapas, cada uma isolada em um módulo:
 
 ### 1. Extração e pré-processamento (`pipeline.py`)
 

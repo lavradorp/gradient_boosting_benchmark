@@ -99,7 +99,7 @@ O projeto usa [uv](https://docs.astral.sh/uv/) como gerenciador de pacotes.
    ```
 3. Os resultados consolidados serão salvos em `results.csv`.
 
-## Limitações conhecidas
+## Limitações
 
 - O benchmark foi executado localmente, em uma única máquina — os valores absolutos de tempo e memória não são portáveis para outro hardware; use-os para comparação **relativa** entre os modelos, não como número absoluto de referência.
 - Os modelos foram comparados com os **hiperparâmetros padrão** de cada biblioteca, não com hiperparâmetros otimizados, logo os resultados refletem o comportamento "out-of-the-box" de cada framework, não o teto de performance possível de cada um.

@@ -2,7 +2,7 @@
 
 Comparação de desempenho estatístico e computacional entre três frameworks de Gradient Boosting: **XGBoost**, **LightGBM** e **CatBoost**.
 
-Tipo do problema de Machine Learning usado: Regressão.
+Tipo de problema de Machine Learning usado: Regressão.
 
 Métricas estatísticas analisadas: MAE, RMSE, R².
 Métricas computacionais analisadas: Tempo de treino, tempo de inferência e uso de RAM.

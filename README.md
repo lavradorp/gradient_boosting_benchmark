@@ -8,7 +8,7 @@ Métricas estatísticas analisadas: MAE, RMSE, R².
 
 Métricas computacionais analisadas: Tempo de treino, tempo de inferência e uso de RAM.
 
-Todos os modelos foram treinados e avaliados sob as mesmas condições: mesma divisão de dados, mesmo pipeline de pré-processamento e mesma quantidade de execuções, no caso foram 10 execuções.
+Todos os modelos foram treinados e avaliados sob as mesmas condições: mesma divisão de dados, mesmo pipeline de pré-processamento e mesma quantidade de execuções, no caso foram 30 execuções.
 
 ## Sobre o dataset
 
@@ -23,7 +23,7 @@ O fluxo acontece em três etapas, cada uma isolada em um módulo:
 ### 1. Extração e pré-processamento (`pipeline.py`)
 
 1. **Leitura**: o CSV é carregado com `pandas.read_csv`.
-2. **Limpeza do alvo**: linhas onde `Trip_Price` está ausente são descartadas.  
+2. **Limpeza do alvo**: linhas onde `Trip_Price` está ausente são descartadas.
 3. **Separação de features e alvo**: `X` recebe todas as colunas exceto `Trip_Price`; `y` recebe apenas `Trip_Price`.
 4. **Identificação dos tipos de coluna**:
    - Colunas numéricas seguem para o pipeline numérico.
@@ -38,21 +38,48 @@ O fluxo acontece em três etapas, cada uma isolada em um módulo:
 
 ### 2. Execução do benchmark (`metrics.py`)
 
-Para cada modelo, a função `benchmark_metrics` roda 10 execuções independentes e em cada uma:
+Para cada modelo, a função `benchmark_metrics` roda 30 execuções independentes e em cada uma:
 
 1. Uma instância nova do modelo é criada, para garantir que nenhum estado de uma rodada vaze para a próxima.
 2. `gc.collect()` é chamado antes de medir, para reduzir ruído de lixo acumulado de rodadas anteriores.
 3. O uso de memória do processo (RSS) é registrado antes do treino.
 4. O treino é executado e cronometrado.
-5. O uso de memória do processo (RSS) é registrado novamente após o treino, e a diferença entre os dois valores é usada como uso de memória da rodada.
+5. O uso de memória do processo (RSS) é registrado novamente após o treino, e a diferença entre os dois valores é registrada como alocação de memória daquela rodada.
 6. A inferência no conjunto de teste é cronometrada separadamente.
 
-Ao final das 10 execuções, as métricas de tempo e memória são consolidadas pela média, e as métricas estatísticas (MAE, RMSE, R²) são calculadas sobre as previsões da última rodada.
+Ao final das 30 execuções, cada tipo de métrica é consolidado de uma forma diferente, de acordo com o que faz sentido estatisticamente para cada uma:
+
+- **Tempo de treino e de inferência**: consolidados pela média junto do desvio padrão. A distribuição dessas medições é estável e a média converge para um valor real conforme o número de execuções aumenta, o desvio padrão mostra o ruído de medição da máquina.
+- **Uso de RAM**: consolidado pelo pico, ou seja, maior valor observado, e pelo total acumulado. Ver a seção "Sobre a medição de memória" abaixo.
+- **Métricas estatísticas (MAE, RMSE, R²)**: calculadas sobre as previsões da última rodada. Como o `random_state` é fixo, o treino é determinístico e o resultado é idêntico em todas as execuções.
 
 ### 3. Consolidação dos resultados (`main.py`)
 
-Os três modelos são instanciados com os mesmos parâmetros de paralelismo (4 threads), o pipeline é executado uma única vez para gerar os dados de treino/teste e cada modelo passa pela função de benchmark. 
-Os resultados de todos os modelos são consolidados e exportados para `results.csv`.
+Os três modelos são instanciados com os mesmos parâmetros de paralelismo (4 threads), o pipeline é executado uma única vez para gerar os dados de treino/teste e cada modelo passa pela função de benchmark. Os resultados de todos os modelos são consolidados e exportados para um arquivo `results_<timestamp>.csv`.
+
+## Sobre a medição de memória
+
+A métrica de memória mede a variação de RSS (Resident Set Size) do processo entre antes e depois do treino. Isso captura alocação real.
+
+O ponto não óbvio é que essa medição não pode ser consolidada pela média. O delta de RSS mede alocação nova de memória junto ao sistema operacional e o alocador só pede memória nova nas primeiras rodadas: depois disso ele reutiliza o que já tem e o delta das rodadas seguintes fica próximo de zero.
+
+Testando o mesmo benchmark com número crescente de execuções, o comportamento fica evidente. A média por rodada cai, mas o total acumulado permanece praticamente constante:
+
+| Modelo | 10 runs | 15 runs | 30 runs | 100 runs | 500 runs |
+|---|---|---|---|---|---|
+| XGBoost — média (MB) | 0,90 | 0,60 | 0,29 | 0,09 | 0,02 |
+| XGBoost — total (MB) | 9,0 | 9,0 | 8,7 | 9,0 | 10,0 |
+| LightGBM — média (MB) | 0,38 | 0,25 | 0,14 | 0,04 | 0,01 |
+| LightGBM — total (MB) | 3,8 | 3,8 | 4,2 | 4,0 | 5,0 |
+| CatBoost — média (MB) | 3,25 | 2,17 | 1,51 | 0,65 | 0,21 |
+| CatBoost — total (MB) | 32,5 | 32,5 | 45,3 | 65,0 | 105,0 |
+
+Duas conclusões:
+
+1. Para XGBoost e LightGBM o total é praticamente fixo, independente do número de execuções.
+2. O desvio padrão da média de RAM é consistentemente maior que a própria média, assinatura de uma distribuição dominada por poucos picos raros.
+
+Por isso a memória é reportada como pico e como total acumulado.
 
 ## Métricas avaliadas
 
@@ -68,21 +95,25 @@ Os resultados de todos os modelos são consolidados e exportados para `results.c
 
 | Métrica | O que significa |
 |---|---|
-| **Avg Train Time (s)** | Tempo médio para treinar o modelo do zero, em segundos, ao longo das 10 execuções. |
+| **Avg Train Time (s)** | Tempo médio para treinar o modelo do zero, em segundos, ao longo das execuções. |
+| **Std Train Time (s)** | Desvio padrão do tempo de treino entre as execuções — comunica o ruído de medição da máquina. |
 | **Avg Infer Latency (ms)** | Tempo médio para gerar previsões no conjunto de teste, em milissegundos. |
-| **Avg Peak RAM - RSS delta (MB)** | Variação da memória física (RSS) do processo entre antes e depois do treino. Captura o consumo real do processo, incluindo o que é alocado fora do Python. |
+| **Std Infer Latency (ms)** | Desvio padrão da latência de inferência entre as execuções. |
+| **Peak RAM - RSS delta (MB)** | Maior alocação de memória observada em uma única rodada de treino. É a métrica de referência para comparar consumo de memória entre os frameworks. |
+| **Total RAM Allocated (MB)** | Soma de toda a memória nova alocada ao longo das execuções. Útil para identificar acumulação contínua entre rodadas. |
 
 ## Estrutura do projeto
 
 ```
 .
 ├── data/
-│   └── taxi_trip_pricing.csv   # dataset
+│   └── taxi_trip_pricing.csv       # dataset
 ├── utils/
-│   ├── pipeline.py             # extração e pré-processamento dos dados
-│   └── metrics.py              # execução do benchmark e consolidação de métricas
-├── main.py                     # orquestra o benchmark e gera results.csv
-├── results.csv                 # saída do benchmark (gerado ao rodar main.py)
+│   ├── pipeline.py                 # extração e pré-processamento dos dados
+│   └── metrics.py                  # execução do benchmark e consolidação de métricas
+├── results/
+│   └──results_<timestamp>.csv      # saída do benchmark (gerado ao rodar main.py) 
+├── main.py                         # orquestra o benchmark e gera o CSV de resultados
 ├── pyproject.toml
 └── README.md
 ```
@@ -90,6 +121,7 @@ Os resultados de todos os modelos são consolidados e exportados para `results.c
 ## Como executar
 
 O projeto usa [uv](https://docs.astral.sh/uv/) como gerenciador de pacotes.
+
 1. Instale as dependências:
    ```bash
    uv sync
@@ -98,10 +130,10 @@ O projeto usa [uv](https://docs.astral.sh/uv/) como gerenciador de pacotes.
    ```bash
    uv run main.py
    ```
-3. Os resultados consolidados serão salvos em `results.csv`.
 
 ## Limitações
 
-- O benchmark foi executado localmente, em uma única máquina — os valores absolutos de tempo e memória não são portáveis para outro hardware; use-os para comparação **relativa** entre os modelos, não como número absoluto de referência.
-- Os modelos foram comparados com os **hiperparâmetros padrão** de cada biblioteca, não com hiperparâmetros otimizados, logo os resultados refletem o comportamento "out-of-the-box" de cada framework, não o teto de performance possível de cada um.
+- O benchmark foi executado localmente, em uma única máquina — os valores absolutos de tempo e memória não são portáveis para outro hardware; use-os para comparação relativa entre os modelos, não como número absoluto de referência.
+- Os modelos foram comparados com os hiperparâmetros padrão de cada biblioteca, não com hiperparâmetros otimizados, logo os resultados refletem o comportamento "out-of-the-box" de cada framework, não o teto de performance possível de cada um.
 - O CatBoost não teve acesso ao seu tratamento nativo de variáveis categóricas, para manter o pré-processamento idêntico entre os três modelos.
+- A medição de memória via delta de RSS captura alocação nova junto ao sistema operacional, não o footprint total do modelo em memória.

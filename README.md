@@ -68,11 +68,8 @@ Testando o mesmo benchmark com número crescente de execuções, o comportamento
 | Modelo | 10 runs | 15 runs | 30 runs | 100 runs | 500 runs |
 |---|---|---|---|---|---|
 | XGBoost — média (MB) | 0,90 | 0,60 | 0,29 | 0,09 | 0,02 |
-| XGBoost — total (MB) | 9,0 | 9,0 | 8,7 | 9,0 | 10,0 |
 | LightGBM — média (MB) | 0,38 | 0,25 | 0,14 | 0,04 | 0,01 |
-| LightGBM — total (MB) | 3,8 | 3,8 | 4,2 | 4,0 | 5,0 |
 | CatBoost — média (MB) | 3,25 | 2,17 | 1,51 | 0,65 | 0,21 |
-| CatBoost — total (MB) | 32,5 | 32,5 | 45,3 | 65,0 | 105,0 |
 
 Duas conclusões:
 

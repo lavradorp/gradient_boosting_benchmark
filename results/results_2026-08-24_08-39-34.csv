@@ -1,0 +1,4 @@
+Model;Runs;Avg Train Time (s);Std Train Time (s);Avg Infer Latency (ms);Std Infer Latency (ms);Avg Peak RAM - RSS delta (MB);Std Peak RAM - RSS delta (MB);MAE;RMSE;R2 Score
+XGBoost;10;0,024;0,001;0,47;0,03;0,9;2,67;7,584;21,823;0,7962
+LightGBM;10;0,058;0,004;0,69;0,06;0,38;1,17;7,0513;18,6336;0,8515
+CatBoost;10;0,389;0,018;0,58;0,23;3,25;5,57;5,5038;16,5208;0,8832
